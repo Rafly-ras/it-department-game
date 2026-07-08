@@ -1,56 +1,72 @@
-# Welcome to your Expo app 👋
+# IT Support Quest: Corporate Mayhem 🎮🔥
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![React Native](https://img.shields.io/badge/React_Native-Expo_SDK_57-22c55e?logo=react)
+![Platform](https://img.shields.io/badge/Platform-Web%20%7C%20Android-38bdf8)
 
-## Get started
+**IT Support Quest: Corporate Mayhem** adalah game 2D Top-Down Web-Native bergaya *Cyberpunk/Retro Terminal* yang mensimulasikan kepanikan seorang teknisi IT di sebuah korporat. Selamatkan hari dari mesin printer yang nge-_jam_, Wi-Fi direktur yang putus, hingga serangan Ransomware, sebelum Boss Stress Level mencapai titik 100%!
 
-1. Install dependencies
+Game ini dibangun secara *cross-platform* (Web & Android) menggunakan teknologi **React Native Expo** tanpa _Game Engine_ terpisah, mengandalkan kekuatan murni `requestAnimationFrame` untuk Game Loop 60FPS.
 
+---
+
+## ⚡ Mengapa Game Ini Dibuat? (Latar Belakang)
+Proyek ini dibuat sebagai **Portfolio Eksperimental** untuk membuktikan bahwa kapabilitas _React Native_ modern mampu merender logika _Game Loop_, sistem benturan 2D (*Collision Detection*), dan integrasi animasi kompleks (60FPS) secara _native_ hanya bermodalkan *Hooks* dan *StyleSheet* murni.
+
+Sebuah solusi pamungkas bagi pengembang Front-End App yang ingin melangkah bebas ke interaktivitas tingkat game 2D santai, dibalut tema korporat IT yang lekat dengan keseharian *developer*.
+
+---
+
+## 🛠️ Tech Stack & Arsitektur Utama
+- **Framework:** React Native + Expo SDK 57 (Expo Router)
+- **Game Engine:** `requestAnimationFrame` Custom Loop (JavaScript Murni, tanpa Box2D / Phaser)
+- **Collision System:** AABB (*Axis-Aligned Bounding Box*)
+- **Storage:** `@react-native-async-storage/async-storage` (Data Persistence Lintas Sesi)
+- **Multimedia:** `expo-av` (SFX Dummy), `expo-image` (High-Performance Image Caching), `React Native Vibration API` (Haptic Feedback Mobile)
+- **Styling:** CSS-in-JS murni (Animated, Absolute Positioning, Web-Glow Effects)
+
+---
+
+## 🚀 Sorotan Fitur Teknis (Technical Highlights)
+1. **Dynamic Event Spawner:** Interval waktu algoritmis untuk memutasi objek "Normal" menjadi "Rusak" dengan pemicu stress tiap 45 detik.
+2. **Cyberpunk UI & HUD:** Implementasi Grid UI dengan efek *text shadow glow* langsung dari _Engine CSS React_. 
+3. **Modular Mini-Games Structure:** *Decoupled components* untuk berbagai *hardware troubleshooting* (*IP Config*, pasang RAM, fix Printer), dipanggil secara *On-Demand* (Modal Overlay).
+4. **Ekonomi State-Management:** Sistem beli *item upgrade* yang terhubung merubah parameter variabel di *Game Loop* pusat (seperti `speed` dan `toleransi kesalahan`).
+5. **Universal Kontroler:** Virtual D-Pad statis yang tersambung sempurna meneruskan *React Synthetic Events* ke setir koordinat Player yang sama dengan papan *Keyboard Desktop*.
+
+---
+
+## 🕹️ Cara Menjalankan Secara Lokal (Dev Mode)
+
+1. **Clone Repository Ini**
+   ```bash
+   git clone https://github.com/username/it-support-quest.git
+   cd it-support-quest
+   ```
+2. **Install Dependensi**
    ```bash
    npm install
    ```
-
-2. Start the app
-
+3. **Jalankan Server Lokal (Expo)**
    ```bash
    npx expo start
    ```
+4. **Buka di Browser:** Tekan huruf `w` pada terminal untuk memainkan versi Web, atau _scan barcode_ memakai aplikasi Expo Go pada HP Android Anda!
 
-In the output, you'll find options to open the app in a
+---
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+## 📱 Cara Membangun (Build) .APK Sendiri
+Game ini di-set ke mode **Landscape**. Untuk meraciknya menjadi file `.apk` yang bisa diedarkan langsung (tanpa perlu ribet via Android Studio), pastikan Anda menggunakan **EAS Build**:
 ```bash
-npm run reset-project
+npm install -g eas-cli
+eas login
+eas build:configure
+eas build -p android --profile preview
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-### Other setup steps
+## 📜 Lisensi
+Dikontribusikan dengan lisensi [MIT License](LICENSE). Anda bebas mengubah, menyalin, mendistribusikan proyek ini selama masih mencantumkan lisensinya.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+*Dirancang dengan 💚, kopi ☕, dan kepanikan kabel.*

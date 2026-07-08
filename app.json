@@ -1,21 +1,20 @@
 {
   "expo": {
-    "name": "it-department-game",
-    "slug": "it-department-game",
+    "name": "IT Support Quest",
+    "slug": "it-support-quest",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "landscape",
     "icon": "./assets/images/icon.png",
-    "scheme": "itdepartmentgame",
-    "userInterfaceStyle": "automatic",
+    "scheme": "itsupportquest",
+    "userInterfaceStyle": "dark",
     "ios": {
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.ras.itsupportquest",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#020617",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -28,9 +27,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#020617",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 150
         }
       ]
     ],
