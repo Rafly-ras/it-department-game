@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Dimensions, Modal, TouchableOpacity, Text } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Constants & Data
 import { MAP_WIDTH, MAP_HEIGHT, PLAYER_SIZE, SPEED, TRIGGER_RADIUS, INITIAL_FURNITURES, TICKET_TEMPLATES, TICKET_LIFESPAN } from './src/constants/GameData';
@@ -15,6 +16,9 @@ import IPConfigGame from './src/minigames/IPConfigGame';
 import RAMInstallationGame from './src/minigames/RAMInstallationGame';
 import PrinterJamGame from './src/minigames/PrinterJamGame';
 
+// Utils
+import { playAlarmSound, playSuccessSound, playGameOverSound } from './src/utils/soundManager';
+
 const checkCollision = (nextX, nextY, objX, objY, objW, objH) => {
   return (
     nextX < objX + objW &&
@@ -27,7 +31,8 @@ const checkCollision = (nextX, nextY, objX, objY, objW, objH) => {
 export default function App() {
   const [windowSize, setWindowSize] = useState(Dimensions.get('window'));
   const [player, setPlayer] = useState({ x: 700, y: 700 }); 
-  
+  const [playerDir, setPlayerDir] = useState('up'); // arah depan ('up')
+
   const keysPressed = useRef({ w: false, a: false, s: false, d: false, ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false, e: false });
   const [promptE, setPromptE] = useState(false); 
   const activeTriggerRef = useRef(null); 
@@ -37,27 +42,34 @@ export default function App() {
   const [tickets, setTickets] = useState([]);
   const [activeMiniGame, setActiveMiniGame] = useState(null);
 
-  // --- SISTEM BARU: EKONOMI, UPGRADE & PENALTI ---
-  const [money, setMoney] = useState(500); // Modal awal
+  // --- SISTEM EKONOMI & PENALTI ---
+  const [money, setMoney] = useState(500); 
   const [stressLevel, setStressLevel] = useState(0);
   const [gameOver, setGameOver] = useState(false);
+  const [highScore, setHighScore] = useState(0);
+  const [isNewRecord, setIsNewRecord] = useState(false);
   
-  const [upgrades, setUpgrades] = useState({
-    fastWalk: false,
-    ipTolerance: false,
-    fasterRam: false
-  });
+  const [upgrades, setUpgrades] = useState({ fastWalk: false, ipTolerance: false, fasterRam: false });
 
-  // Tentukan Speed berdasarkan upgrade
-  const calculateSpeed = () => {
-    return upgrades.fastWalk ? 15 : SPEED;
-  };
+  // Data Pemuat (On Mount)
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const storedScore = await AsyncStorage.getItem('@high_score');
+        if (storedScore !== null) {
+          setHighScore(parseInt(storedScore));
+        }
+      } catch (e) { console.error("Gagal load storage", e); }
+    };
+    loadData();
+  }, []);
 
-  // --- DYNAMIC TICKET SPAWNER & TIMER ---
+  const calculateSpeed = () => upgrades.fastWalk ? 15 : SPEED;
+
+  // --- DYNAMIC TICKET SPAWNER ---
   useEffect(() => {
     if (gameOver) return;
 
-    // 1. Spawner Tiket (Tiap 30 detik nambah keluhan)
     const spawnTimer = setInterval(() => {
        setFurnitures(prevFurn => {
            const normalObjs = prevFurn.filter(f => f.status === 'normal');
@@ -71,11 +83,12 @@ export default function App() {
              { id: 'tick_' + Date.now(), title: template.title, targetId: template.targetId, status: 'active', createdAt: Date.now() }
            ]);
 
+           playAlarmSound(); // Trigger Alarm
+
            return prevFurn.map(f => f.id === randomObj.id ? { ...f, status: 'broken', color: '#ef4444' } : f);
        });
-    }, 20000); // 20 detik untuk testing seru
+    }, 20000); 
 
-    // 2. Checking Lifespan (Tiap 1 detik ngecek mana yg expired)
     const checkTimer = setInterval(() => {
        const now = Date.now();
        setTickets(prevTickets => {
@@ -85,9 +98,8 @@ export default function App() {
          newTickets.forEach((t) => {
            if (t.status === 'active' && (now - t.createdAt) > TICKET_LIFESPAN) {
              t.status = 'expired';
-             penalty += 25; // Nambah stress boss 25% tiap tiket lewat
+             penalty += 25; 
              
-             // Normalkan kembali perabotan 
              setFurnitures(prev => prev.map(f => f.id === t.targetId ? { ...f, status: 'normal', color: '#3b82f6' } : f));
            }
          });
@@ -95,21 +107,35 @@ export default function App() {
          if (penalty > 0) {
             setStressLevel(prev => {
               const res = prev + penalty;
-              if (res >= 100) setGameOver(true);
+              if (res >= 100) triggerGameOver(); 
               return res;
             });
          }
          
-         // Buang dari UI tiket yg expired
          return newTickets.filter(t => t.status !== 'expired');
        });
     }, 1000);
 
-    return () => {
-      clearInterval(spawnTimer);
-      clearInterval(checkTimer);
-    }
+    return () => { clearInterval(spawnTimer); clearInterval(checkTimer); }
   }, [gameOver]);
+
+  const triggerGameOver = async () => {
+    setGameOver(true);
+    playGameOverSound();
+    
+    // Cek High Score
+    if (money > highScore) {
+      setHighScore(money);
+      setIsNewRecord(true);
+      try {
+        await AsyncStorage.setItem('@high_score', money.toString());
+      } catch (e) {
+        console.error("Gagal save storage", e);
+      }
+    } else {
+      setIsNewRecord(false);
+    }
+  };
 
   // --- KEYBOARD & JOYSTICK LISTENER ---
   const handleKeyIn = (key) => {
@@ -119,7 +145,6 @@ export default function App() {
       keysPressed.current[k] = true;
       keysPressed.current[key] = true;
     }
-    // Action key / button E center
     if (k === 'e' && activeTriggerRef.current && !paused) {
       startInteraction(activeTriggerRef.current);
     }
@@ -158,12 +183,13 @@ export default function App() {
 
       const keys = keysPressed.current;
       let dx = 0; let dy = 0;
+      let newDir = playerDir;
       const currentSpeed = calculateSpeed();
 
-      if (keys.w || keys.ArrowUp) dy -= currentSpeed;
-      if (keys.s || keys.ArrowDown) dy += currentSpeed;
-      if (keys.a || keys.ArrowLeft) dx -= currentSpeed;
-      if (keys.d || keys.ArrowRight) dx += currentSpeed;
+      if (keys.w || keys.ArrowUp) { dy -= currentSpeed; newDir = 'up'; }
+      if (keys.s || keys.ArrowDown) { dy += currentSpeed; newDir = 'down'; }
+      if (keys.a || keys.ArrowLeft) { dx -= currentSpeed; newDir = 'left'; }
+      if (keys.d || keys.ArrowRight) { dx += currentSpeed; newDir = 'right'; }
 
       if (dx !== 0 && dy !== 0) {
         const length = Math.sqrt(dx * dx + dy * dy);
@@ -207,14 +233,17 @@ export default function App() {
 
         return { x: newX, y: newY };
       });
+
+      if (newDir !== playerDir) setPlayerDir(newDir);
+
       animationFrameId = requestAnimationFrame(gameLoop);
     };
 
     animationFrameId = requestAnimationFrame(gameLoop);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [paused, furnitures, gameOver, upgrades]);
+  }, [paused, furnitures, gameOver, upgrades, playerDir]);
 
-  // --- LOGIKA GAMEPLAY & MINIGAME ---
+  // --- LOGIKA MINIGAME ---
   const startInteraction = (furnitureId) => {
     setPaused(true); 
     setActiveMiniGame(furnitureId);
@@ -229,13 +258,10 @@ export default function App() {
     setFurnitures(prev => prev.map(f => f.id === targetId ? { ...f, status: 'fixed', color: '#22c55e' } : f));
     setTickets(prev => prev.map(t => t.targetId === targetId && t.status === 'active' ? { ...t, status: 'completed' } : t));
     
-    // Gaji masuk! $100 per tiket
     setMoney(s => s + 100);
-    
-    // Ngurangin stress karena benerin
     setStressLevel(s => Math.max(0, s - 10)); 
+    playSuccessSound(); // Mainkan nada success
 
-    alert("Ticket Beres! Gajian +$100. Stress -10%"); 
     closeMiniGame(); 
   };
 
@@ -243,22 +269,23 @@ export default function App() {
     if (money >= price) {
       setMoney(m => m - price);
       setUpgrades(u => ({ ...u, [upgradeId]: true }));
+      playSuccessSound();
     }
   };
 
   const resetGame = () => {
      setGameOver(false);
      setStressLevel(0);
-     setMoney(0);
+     setMoney(0); // Roguelike wipe
      setUpgrades({ fastWalk: false, ipTolerance: false, fasterRam: false });
      setTickets([]);
      setFurnitures(INITIAL_FURNITURES);
      setPlayer({ x: 700, y: 700 });
+     setIsNewRecord(false);
   };
 
   const renderActiveMiniGame = () => {
     if (activeMiniGame === 'basecamp') return <ITShopModal money={money} upgrades={upgrades} onBuy={handleBuyUpgrade} onClose={closeMiniGame} />;
-    
     if (activeMiniGame === 'rack1') return <IPConfigGame onComplete={() => completeTicket('rack1')} onClose={closeMiniGame} toleranceUpgrade={upgrades.ipTolerance} />;
     if (activeMiniGame === 'desk1') return <RAMInstallationGame onComplete={() => completeTicket('desk1')} onClose={closeMiniGame} fasterUpgrade={upgrades.fasterRam} />;
     if (activeMiniGame === 'printer1') return <PrinterJamGame onComplete={() => completeTicket('printer1')} onClose={closeMiniGame} />;
@@ -271,7 +298,6 @@ export default function App() {
              <TouchableOpacity style={{marginTop: 20}} onPress={closeMiniGame}><Text style={{color: '#ef4444'}}>Batal</Text></TouchableOpacity>
          </>
     )
-
     return null;
   };
 
@@ -285,12 +311,12 @@ export default function App() {
          cameraOffsetY={cameraOffsetY}
          furnitures={furnitures}
          player={player}
+         playerDir={playerDir}
          promptE={promptE}
       />
 
-      <TicketOverlay money={money} tickets={tickets} stressLevel={stressLevel} />
+      <TicketOverlay money={money} highScore={highScore} tickets={tickets} stressLevel={stressLevel} />
 
-      {/* Kontrol Mobile Transparan (Bisa Dilihat di Browser) */}
       <VirtualDPad onKeyPress={handleKeyIn} onKeyRelease={handleKeyOut} />
 
       {promptE && !paused && !gameOver && (
@@ -311,9 +337,13 @@ export default function App() {
       {/* MODAL GAME OVER */}
       <Modal visible={gameOver} transparent={true} animationType="slide">
          <View style={[styles.modalOverlay, {backgroundColor: 'rgba(153, 27, 27, 0.95)'}]}>
-            <Text style={{color: '#fca5a5', fontSize: 60, fontWeight: '900'}}>GAME OVER</Text>
+            <Text style={{color: '#fca5a5', fontSize: 60, fontWeight: '900', textAlign: 'center'}}>GAME OVER</Text>
             <Text style={{color: 'white', fontSize: 24, marginTop: 10, width:'80%', textAlign:'center'}}>STRESS LEVEL BOSS MENCAPAI 100%. LU DIPECAT!</Text>
             
+            {isNewRecord && (
+                <Text style={{color: '#fbbf24', fontSize: 32, fontWeight: 'bold', marginTop: 20, animation: 'bounce'}}>🏆 REKOR BARU: ${highScore} 🏆</Text>
+            )}
+
             <TouchableOpacity style={{backgroundColor: '#fff', padding: 20, borderRadius: 10, marginTop: 50}} onPress={resetGame}>
                <Text style={{color: '#991b1b', fontSize: 20, fontWeight: 'bold'}}>CARI KERJAAN BARU (RESTART)</Text>
             </TouchableOpacity>
