@@ -7,14 +7,14 @@ export const TRIGGER_RADIUS = 50;
 export const TICKET_LIFESPAN = 45000; // 45 seconds ticket timer
 
 export const ROOMS = [
-  { id: 'server', name: 'Ruang IT/Server', x: 50, y: 50, w: 600, h: 550, color: '#334155' },
-  { id: 'hrd', name: 'Ruang HRD/Kubikel', x: 750, y: 50, w: 800, h: 550, color: '#475569' },
-  { id: 'direktur', name: 'Ruang CEO', x: 50, y: 700, w: 600, h: 500, color: '#1e293b' },
+  { id: 'server', name: 'Ruang IT/Server', x: 50, y: 50, w: 600, h: 550, color: '#334155', texture: require('../../assets/sprites/floor_server.png') },
+  { id: 'hrd', name: 'Ruang HRD/Kubikel', x: 750, y: 50, w: 800, h: 550, color: '#475569', texture: require('../../assets/sprites/floor_office.png') },
+  { id: 'direktur', name: 'Ruang CEO', x: 50, y: 700, w: 600, h: 500, color: '#1e293b', texture: require('../../assets/sprites/floor_office.png') },
   
   // NEW ROOMS
-  { id: 'meeting', name: 'Ruang Meeting Utama', x: 750, y: 700, w: 800, h: 500, color: '#111827' },
-  { id: 'pantry', name: 'Lounge / Pantry', x: 1650, y: 50, w: 600, h: 1150, color: '#374151' },
-  { id: 'gudang', name: 'Gudang Rak IT', x: 50, y: 1300, w: 600, h: 800, color: '#1f2937' },
+  { id: 'meeting', name: 'Ruang Meeting Utama', x: 750, y: 700, w: 800, h: 500, color: '#111827', texture: require('../../assets/sprites/floor_office.png') },
+  { id: 'pantry', name: 'Lounge / Pantry', x: 1650, y: 50, w: 600, h: 1150, color: '#374151', texture: require('../../assets/sprites/floor_pantry.png') },
+  { id: 'gudang', name: 'Gudang Rak IT', x: 50, y: 1300, w: 600, h: 800, color: '#1f2937', texture: require('../../assets/sprites/floor_server.png') },
 ];
 
 export const INITIAL_FURNITURES = [

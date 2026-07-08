@@ -1,126 +1,114 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function TicketOverlay({ money, highScore, tickets, stressLevel }) {
-  const getStressColor = () => {
-    if (stressLevel < 50) return '#4ade80'; // Neon Green
-    if (stressLevel < 75) return '#facc15'; // Yellow
-    return '#f87171'; // Red
+export default function TicketOverlay({ money, highScore, tickets, stressLevel, playerPos }) {
+  const getStressLevelText = () => {
+    if (stressLevel < 30) return 'Rendah';
+    if (stressLevel < 70) return 'Sedang';
+    return 'TINGGI';
   };
+
+  const getStressColor = () => {
+    if (stressLevel < 30) return '#4ade80';
+    if (stressLevel < 70) return '#facc15';
+    return '#f87171';
+  };
+
+  const activeTickets = tickets.filter(t => t.status === 'active');
 
   return (
     <>
-      <View style={styles.hudBlockLeft}>
-        <Text style={styles.labelCyber}>[ SALDO_BANK ]</Text>
-        <Text style={styles.moneyText}>${money}</Text>
-        {highScore > 0 && <Text style={styles.highScoreText}>REKOR: ${highScore}</Text>}
-      </View>
-
-      <View style={styles.hudBlockRight}>
-        <Text style={[styles.labelCyber, {textAlign:'right'}]}>[ CRITICAL_STRESS_LEVEL ]</Text>
-        <Text style={[styles.stressValueText, {color: getStressColor()}]}>{stressLevel}%</Text>
+      <View style={styles.hudBlockBottomLeft}>
+        <Text style={styles.titleText}>TIKET AKTIF</Text>
+        <View style={styles.divider} />
         
-        <View style={styles.stressBarBg}>
-          <View style={[styles.stressBarFill, { width: `${stressLevel}%`, backgroundColor: getStressColor(),
-            shadowColor: getStressColor(), shadowOpacity: 1, shadowRadius: 10 }]} />
-        </View>
-
-        <Text style={[styles.labelCyber, {marginTop: 15}]}>[ ACTIVE_QUEUE ]</Text>
         <View style={styles.ticketList}>
-          {tickets.map((ticket) => (
-            <View key={ticket.id} style={[styles.ticketItem, ticket.status === 'completed' && { opacity: 0.3 }]}>
-              <Text style={[styles.ticketItemText, ticket.status === 'completed' && { textDecorationLine: 'line-through' }]}>
-                {ticket.status === 'completed' ? 'PASS' : 'WARN'} :: {ticket.title}
+          {activeTickets.map((ticket, index) => (
+            <View key={ticket.id} style={styles.ticketItem}>
+              <Text style={styles.ticketItemText}>
+                □ {index + 1}. {ticket.title}
               </Text>
             </View>
           ))}
-          {tickets.filter(t => t.status === 'active').length === 0 && (
-            <Text style={[styles.ticketItemText, { marginTop: 5, color: '#4ade80' }]}>
-              SYS_IDLE_READY... ☕
-            </Text>
+          {activeTickets.length === 0 && (
+            <View style={styles.ticketItem}>
+               <Text style={[styles.ticketItemText, {color: '#94a3b8'}]}>
+                 ✓ Tidak ada tiket. Santuy...
+               </Text>
+            </View>
           )}
         </View>
+      </View>
+
+      <View style={styles.statusBar}>
+         <Text style={styles.statusText}>
+            IT Support: (X: {Math.round(playerPos?.x || 0)}, Y: {Math.round(playerPos?.y || 0)})  |  Skor: ${money}  |  Stress: <Text style={{color: getStressColor()}}>{getStressLevelText()} ({stressLevel}%)</Text>
+         </Text>
       </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  hudBlockLeft: {
+  hudBlockBottomLeft: {
     position: 'absolute',
-    top: 20,
+    bottom: 40,
     left: 20,
-    backgroundColor: 'rgba(5, 5, 5, 0.85)',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderWidth: 1,
-    borderColor: '#4ade80',
-    borderLeftWidth: 4,
-    borderRightWidth: 4,
+    width: 350,
+    backgroundColor: '#1e293b',
+    padding: 15,
+    borderWidth: 4,
+    borderColor: '#94a3b8',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 20,
+    zIndex: 100
   },
-  labelCyber: {
-    color: '#64748b',
-    fontSize: 10,
+  titleText: {
+    color: '#f8fafc',
+    fontSize: 18,
     fontFamily: 'monospace',
     fontWeight: 'bold',
-    letterSpacing: 1,
-    marginBottom: 5,
+    letterSpacing: 2
   },
-  moneyText: {
-    color: '#4ade80',
-    fontWeight: '900',
-    fontSize: 26,
-    fontFamily: 'monospace',
-    textShadowColor: '#22c55e',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
-  },
-  highScoreText: {
-    color: '#fbbf24',
-    fontFamily: 'monospace',
-    fontSize: 10,
-    marginTop: 5,
-  },
-  hudBlockRight: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    width: 320,
-    backgroundColor: 'rgba(5, 5, 5, 0.9)',
-    padding: 15,
-    borderWidth: 1,
-    borderColor: '#38bdf8',
-    borderStyle: 'dashed',
-  },
-  stressValueText: {
-    fontSize: 18,
-    fontWeight: '900',
-    fontFamily: 'monospace',
-    textAlign: 'right',
-    marginBottom: 5,
-  },
-  stressBarBg: { 
-    width: '100%', 
-    height: 8, 
-    backgroundColor: '#1e293b', 
-    borderWidth: 1,
-    borderColor: '#0f172a'
-  },
-  stressBarFill: { 
-    height: '100%' 
+  divider: {
+    height: 2,
+    backgroundColor: '#34d399',
+    marginVertical: 10
   },
   ticketList: {
-    marginTop: 5,
-    borderLeftWidth: 2,
-    borderColor: '#cbd5e1',
-    paddingLeft: 10
+    marginTop: 5
   },
-  ticketItem: { 
-    marginBottom: 8 
+  ticketItem: {
+    marginBottom: 8
   },
-  ticketItemText: { 
-    color: '#f8fafc',
-    fontSize: 12, 
+  ticketItemText: {
+    color: '#4ade80',
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontFamily: 'monospace'
+  },
+  
+  statusBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 35,
+    backgroundColor: '#020617',
+    borderTopWidth: 2,
+    borderTopColor: '#334155',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    zIndex: 110
+  },
+  statusText: {
+    color: '#cbd5e1',
     fontFamily: 'monospace',
+    fontSize: 12,
+    fontWeight: 'bold'
   }
 });

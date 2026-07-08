@@ -59,7 +59,7 @@ export default function VirtualDPad({ onKeyPress, onKeyRelease }) {
 
 const styles = StyleSheet.create({
   dpadContainer: {
-    position: 'absolute', bottom: 30, left: 30, width: 220, height: 220,
+    position: 'absolute', bottom: 60, right: 30, width: 220, height: 220,
     justifyContent: 'center', alignItems: 'center', zIndex: 99
   },
   row: { flexDirection: 'row' },

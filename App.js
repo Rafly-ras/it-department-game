@@ -219,7 +219,15 @@ export default function App() {
 
       if (triggerFound !== activeTriggerRef.current) {
         activeTriggerRef.current = triggerFound;
-        setPromptE(!!triggerFound);
+        if (triggerFound) {
+           const found = furnitures.find(f => f.id === triggerFound);
+           let title = "Interaksi";
+           if(found.status === 'shop') title = "Buka Toko";
+           else if (found.status === 'broken') title = `Perbaiki ${found.name}`;
+           setPromptE({ id: triggerFound, title });
+        } else {
+           setPromptE(null);
+        }
       }
 
       if (newDir !== playerDir) setPlayerDir(newDir);
@@ -314,28 +322,18 @@ export default function App() {
      return <MainMenu onStart={() => setGameState('PLAYING')} />;
   }
 
-  const cameraOffsetX = windowSize.width / 2 - (player.x + PLAYER_SIZE / 2);
-  const cameraOffsetY = windowSize.height / 2 - (player.y + PLAYER_SIZE / 2);
-
   return (
     <View style={styles.container}>
       <GameMap 
-         cameraOffsetX={cameraOffsetX}
-         cameraOffsetY={cameraOffsetY}
          furnitures={furnitures}
          player={player}
          playerDir={playerDir}
          promptE={promptE}
+         windowSize={windowSize}
       />
 
-      <TicketOverlay money={money} highScore={highScore} tickets={tickets} stressLevel={stressLevel} />
+      <TicketOverlay money={money} highScore={highScore} tickets={tickets} stressLevel={stressLevel} playerPos={player} />
       <VirtualDPad onKeyPress={handleKeyIn} onKeyRelease={handleKeyOut} />
-
-      {promptE && !paused && !gameOver && (
-        <TouchableOpacity style={styles.promptEBtn} onPress={() => startInteraction(activeTriggerRef.current)}>
-          <Text style={styles.promptEText}>[E] ACTIONS_REQ</Text>
-        </TouchableOpacity>
-      )}
 
       <Modal visible={paused && activeMiniGame !== null && !gameOver} transparent={true} animationType="fade">
         <View style={styles.modalOverlay}>
