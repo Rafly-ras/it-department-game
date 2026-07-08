@@ -2,18 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Dimensions, Modal, TouchableOpacity, Text } from 'react-native';
 
 // Constants & Data
-import { MAP_WIDTH, MAP_HEIGHT, PLAYER_SIZE, SPEED, TRIGGER_RADIUS, INITIAL_FURNITURES, TICKET_TEMPLATES } from './src/constants/GameData';
+import { MAP_WIDTH, MAP_HEIGHT, PLAYER_SIZE, SPEED, TRIGGER_RADIUS, INITIAL_FURNITURES, TICKET_TEMPLATES, TICKET_LIFESPAN } from './src/constants/GameData';
 
 // Components
 import GameMap from './src/components/GameMap';
 import TicketOverlay from './src/components/TicketOverlay';
+import VirtualDPad from './src/components/VirtualDPad';
+import ITShopModal from './src/components/ITShopModal';
 
 // Mini Games
 import IPConfigGame from './src/minigames/IPConfigGame';
 import RAMInstallationGame from './src/minigames/RAMInstallationGame';
 import PrinterJamGame from './src/minigames/PrinterJamGame';
 
-// --- FUNGSI HELPER MATEMATIKA ---
 const checkCollision = (nextX, nextY, objX, objY, objW, objH) => {
   return (
     nextX < objX + objW &&
@@ -27,106 +28,147 @@ export default function App() {
   const [windowSize, setWindowSize] = useState(Dimensions.get('window'));
   const [player, setPlayer] = useState({ x: 700, y: 700 }); 
   
-  const keysPressed = useRef({ w: false, a: false, s: false, d: false, ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false });
+  const keysPressed = useRef({ w: false, a: false, s: false, d: false, ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false, e: false });
   const [promptE, setPromptE] = useState(false); 
   const activeTriggerRef = useRef(null); 
   
   const [paused, setPaused] = useState(false);
-  const [score, setScore] = useState(0);
-  
   const [furnitures, setFurnitures] = useState(INITIAL_FURNITURES);
-  
-  // Diberi 2 tiket awal statis berdasarkan ID template
-  const [tickets, setTickets] = useState([
-    { id: 't1', title: TICKET_TEMPLATES[2].title, targetId: 'rack1', status: 'active' },
-    { id: 't2', title: TICKET_TEMPLATES[3].title, targetId: 'desk1', status: 'active' },
-  ]);
-
+  const [tickets, setTickets] = useState([]);
   const [activeMiniGame, setActiveMiniGame] = useState(null);
 
-  // --- DYNAMIC TICKET SPAWNER ---
+  // --- SISTEM BARU: EKONOMI, UPGRADE & PENALTI ---
+  const [money, setMoney] = useState(500); // Modal awal
+  const [stressLevel, setStressLevel] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
+  
+  const [upgrades, setUpgrades] = useState({
+    fastWalk: false,
+    ipTolerance: false,
+    fasterRam: false
+  });
+
+  // Tentukan Speed berdasarkan upgrade
+  const calculateSpeed = () => {
+    return upgrades.fastWalk ? 15 : SPEED;
+  };
+
+  // --- DYNAMIC TICKET SPAWNER & TIMER ---
   useEffect(() => {
-    // Jalankan interval per 30 Detik
+    if (gameOver) return;
+
+    // 1. Spawner Tiket (Tiap 30 detik nambah keluhan)
     const spawnTimer = setInterval(() => {
        setFurnitures(prevFurn => {
-           // Cek objek mana aja yang sedang normal
-           const normalObjs = prevFurn.filter(f => f.status === 'normal' || f.status === 'fixed');
-           if (normalObjs.length === 0) return prevFurn; // Kalo semua rusak, ga spawn tiket baru
-
-           // Pilih acak 1 objek
-           const randomObj = normalObjs[Math.floor(Math.random() * normalObjs.length)];
+           const normalObjs = prevFurn.filter(f => f.status === 'normal');
+           if (normalObjs.length === 0) return prevFurn;
            
-           // Daftarkan ke sistem tiket
-           const template = TICKET_TEMPLATES.find(t => t.targetId === randomObj.id) || { title: `Gangguan pada ${randomObj.name}`, targetId: randomObj.id };
+           const randomObj = normalObjs[Math.floor(Math.random() * normalObjs.length)];
+           const template = TICKET_TEMPLATES.find(t => t.targetId === randomObj.id) || { title: `Gangguan ${randomObj.name}`, targetId: randomObj.id };
            
            setTickets(prevTickets => [
              ...prevTickets,
-             { id: 'tick_' + Date.now(), title: template.title, targetId: template.targetId, status: 'active' }
+             { id: 'tick_' + Date.now(), title: template.title, targetId: template.targetId, status: 'active', createdAt: Date.now() }
            ]);
 
-           // Bikin objek itu jadi rusak lagi ("broken" / merah)
            return prevFurn.map(f => f.id === randomObj.id ? { ...f, status: 'broken', color: '#ef4444' } : f);
        });
-    }, 30000); // 30000 ms = 30 detik
+    }, 20000); // 20 detik untuk testing seru
 
-    return () => clearInterval(spawnTimer);
-  }, []);
-
-  // --- KEYBOARD LISTENER ---
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      const key = e.key.toLowerCase();
-      if (keysPressed.current.hasOwnProperty(e.key) || Object.keys(keysPressed.current).includes(key)) {
-        keysPressed.current[key] = true;
-        keysPressed.current[e.key] = true;
-      }
-      if ((key === 'e') && activeTriggerRef.current && !paused) {
-        startMiniGame(activeTriggerRef.current);
-      }
-    };
-
-    const handleKeyUp = (e) => {
-      const key = e.key.toLowerCase();
-      if (keysPressed.current.hasOwnProperty(e.key) || Object.keys(keysPressed.current).includes(key)) {
-        keysPressed.current[key] = false;
-        keysPressed.current[e.key] = false;
-      }
-    };
-
-    const handleResize = () => setWindowSize(Dimensions.get('window'));
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    Dimensions.addEventListener('change', handleResize);
+    // 2. Checking Lifespan (Tiap 1 detik ngecek mana yg expired)
+    const checkTimer = setInterval(() => {
+       const now = Date.now();
+       setTickets(prevTickets => {
+         let newTickets = [...prevTickets];
+         let penalty = 0;
+         
+         newTickets.forEach((t) => {
+           if (t.status === 'active' && (now - t.createdAt) > TICKET_LIFESPAN) {
+             t.status = 'expired';
+             penalty += 25; // Nambah stress boss 25% tiap tiket lewat
+             
+             // Normalkan kembali perabotan 
+             setFurnitures(prev => prev.map(f => f.id === t.targetId ? { ...f, status: 'normal', color: '#3b82f6' } : f));
+           }
+         });
+         
+         if (penalty > 0) {
+            setStressLevel(prev => {
+              const res = prev + penalty;
+              if (res >= 100) setGameOver(true);
+              return res;
+            });
+         }
+         
+         // Buang dari UI tiket yg expired
+         return newTickets.filter(t => t.status !== 'expired');
+       });
+    }, 1000);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      clearInterval(spawnTimer);
+      clearInterval(checkTimer);
+    }
+  }, [gameOver]);
+
+  // --- KEYBOARD & JOYSTICK LISTENER ---
+  const handleKeyIn = (key) => {
+    if (gameOver) return;
+    const k = key.toLowerCase();
+    if (keysPressed.current.hasOwnProperty(key) || Object.keys(keysPressed.current).includes(k)) {
+      keysPressed.current[k] = true;
+      keysPressed.current[key] = true;
+    }
+    // Action key / button E center
+    if (k === 'e' && activeTriggerRef.current && !paused) {
+      startInteraction(activeTriggerRef.current);
+    }
+  }
+
+  const handleKeyOut = (key) => {
+    const k = key.toLowerCase();
+    if (keysPressed.current.hasOwnProperty(key) || Object.keys(keysPressed.current).includes(k)) {
+      keysPressed.current[k] = false;
+      keysPressed.current[key] = false;
+    }
+  }
+
+  useEffect(() => {
+    const onKeyD = (e) => handleKeyIn(e.key);
+    const onKeyU = (e) => handleKeyOut(e.key);
+    const onResize = () => setWindowSize(Dimensions.get('window'));
+
+    window.addEventListener('keydown', onKeyD);
+    window.addEventListener('keyup', onKeyU);
+    Dimensions.addEventListener('change', onResize);
+    return () => {
+      window.removeEventListener('keydown', onKeyD);
+      window.removeEventListener('keyup', onKeyU);
     };
-  }, [paused]);
+  }, [paused, gameOver]);
 
   // --- GAME LOOP ---
   useEffect(() => {
     let animationFrameId;
-
     const gameLoop = () => {
-      if (paused) {
+      if (paused || gameOver) {
         animationFrameId = requestAnimationFrame(gameLoop);
         return;
       }
 
       const keys = keysPressed.current;
       let dx = 0; let dy = 0;
+      const currentSpeed = calculateSpeed();
 
-      if (keys.w || keys.ArrowUp) dy -= SPEED;
-      if (keys.s || keys.ArrowDown) dy += SPEED;
-      if (keys.a || keys.ArrowLeft) dx -= SPEED;
-      if (keys.d || keys.ArrowRight) dx += SPEED;
+      if (keys.w || keys.ArrowUp) dy -= currentSpeed;
+      if (keys.s || keys.ArrowDown) dy += currentSpeed;
+      if (keys.a || keys.ArrowLeft) dx -= currentSpeed;
+      if (keys.d || keys.ArrowRight) dx += currentSpeed;
 
       if (dx !== 0 && dy !== 0) {
         const length = Math.sqrt(dx * dx + dy * dy);
-        dx = (dx / length) * SPEED;
-        dy = (dy / length) * SPEED;
+        dx = (dx / length) * currentSpeed;
+        dy = (dy / length) * currentSpeed;
       }
 
       setPlayer((prev) => {
@@ -153,7 +195,7 @@ export default function App() {
             h: obj.h + (TRIGGER_RADIUS * 2)
           };
           
-          if (obj.status === 'broken' && checkCollision(newX, newY, triggerArea.x, triggerArea.y, triggerArea.w, triggerArea.h)) {
+          if ((obj.status === 'broken' || obj.status === 'shop') && checkCollision(newX, newY, triggerArea.x, triggerArea.y, triggerArea.w, triggerArea.h)) {
             triggerFound = obj.id;
           }
         }
@@ -165,16 +207,15 @@ export default function App() {
 
         return { x: newX, y: newY };
       });
-
       animationFrameId = requestAnimationFrame(gameLoop);
     };
 
     animationFrameId = requestAnimationFrame(gameLoop);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [paused, furnitures]);
+  }, [paused, furnitures, gameOver, upgrades]);
 
   // --- LOGIKA GAMEPLAY & MINIGAME ---
-  const startMiniGame = (furnitureId) => {
+  const startInteraction = (furnitureId) => {
     setPaused(true); 
     setActiveMiniGame(furnitureId);
   };
@@ -187,29 +228,49 @@ export default function App() {
   const completeTicket = (targetId) => {
     setFurnitures(prev => prev.map(f => f.id === targetId ? { ...f, status: 'fixed', color: '#22c55e' } : f));
     setTickets(prev => prev.map(t => t.targetId === targetId && t.status === 'active' ? { ...t, status: 'completed' } : t));
-    setScore(s => s + 100);
-    alert("Ticket Solved! +100 Point"); 
+    
+    // Gaji masuk! $100 per tiket
+    setMoney(s => s + 100);
+    
+    // Ngurangin stress karena benerin
+    setStressLevel(s => Math.max(0, s - 10)); 
+
+    alert("Ticket Beres! Gajian +$100. Stress -10%"); 
     closeMiniGame(); 
   };
 
+  const handleBuyUpgrade = (upgradeId, price) => {
+    if (money >= price) {
+      setMoney(m => m - price);
+      setUpgrades(u => ({ ...u, [upgradeId]: true }));
+    }
+  };
+
+  const resetGame = () => {
+     setGameOver(false);
+     setStressLevel(0);
+     setMoney(0);
+     setUpgrades({ fastWalk: false, ipTolerance: false, fasterRam: false });
+     setTickets([]);
+     setFurnitures(INITIAL_FURNITURES);
+     setPlayer({ x: 700, y: 700 });
+  };
+
   const renderActiveMiniGame = () => {
-    if (activeMiniGame === 'rack1') return <IPConfigGame onComplete={() => completeTicket('rack1')} onClose={closeMiniGame} />;
-    if (activeMiniGame === 'desk1') return <RAMInstallationGame onComplete={() => completeTicket('desk1')} onClose={closeMiniGame} />;
-    if (activeMiniGame === 'printer1') return <PrinterJamGame onComplete={() => completeTicket('printer1')} onClose={closeMiniGame} />;
+    if (activeMiniGame === 'basecamp') return <ITShopModal money={money} upgrades={upgrades} onBuy={handleBuyUpgrade} onClose={closeMiniGame} />;
     
-    // Default fallback untuk objek yang tidak punya minigame spesifik (misal Router)
-    if (activeMiniGame === 'router1') {
-      return (
+    if (activeMiniGame === 'rack1') return <IPConfigGame onComplete={() => completeTicket('rack1')} onClose={closeMiniGame} toleranceUpgrade={upgrades.ipTolerance} />;
+    if (activeMiniGame === 'desk1') return <RAMInstallationGame onComplete={() => completeTicket('desk1')} onClose={closeMiniGame} fasterUpgrade={upgrades.fasterRam} />;
+    if (activeMiniGame === 'printer1') return <PrinterJamGame onComplete={() => completeTicket('printer1')} onClose={closeMiniGame} />;
+    if (activeMiniGame === 'router1') return (
          <>
              <Text style={styles.modalTitle}>RESTART ROUTER</Text>
-             <Text style={{color: '#fff', fontSize: 16, marginBottom: 20}}>Tekan tombol untuk me-restart modem/router direktur!</Text>
              <TouchableOpacity style={{backgroundColor: '#3b82f6', padding: 15, borderRadius: 8, width: 200, alignItems:'center'}} onPress={() => completeTicket('router1')}>
                 <Text style={{color: 'white', fontWeight: 'bold'}}>RESTART NETWORK</Text>
              </TouchableOpacity>
              <TouchableOpacity style={{marginTop: 20}} onPress={closeMiniGame}><Text style={{color: '#ef4444'}}>Batal</Text></TouchableOpacity>
          </>
-      )
-    }
+    )
 
     return null;
   };
@@ -227,21 +288,36 @@ export default function App() {
          promptE={promptE}
       />
 
-      <TicketOverlay score={score} tickets={tickets} />
+      <TicketOverlay money={money} tickets={tickets} stressLevel={stressLevel} />
 
-      {promptE && !paused && (
-        <TouchableOpacity style={styles.promptEBtn} onPress={() => startMiniGame(activeTriggerRef.current)}>
-          <Text style={styles.promptEText}>[E] Perbaiki Perangkat</Text>
+      {/* Kontrol Mobile Transparan (Bisa Dilihat di Browser) */}
+      <VirtualDPad onKeyPress={handleKeyIn} onKeyRelease={handleKeyOut} />
+
+      {promptE && !paused && !gameOver && (
+        <TouchableOpacity style={styles.promptEBtn} onPress={() => startInteraction(activeTriggerRef.current)}>
+          <Text style={styles.promptEText}>[E] Interaksi</Text>
         </TouchableOpacity>
       )}
 
-      {/* MODAL WRAPPER UMUM */}
-      <Modal visible={paused && activeMiniGame !== null} transparent={true} animationType="fade">
+      {/* MODAL MINIGAMES / TOKO */}
+      <Modal visible={paused && activeMiniGame !== null && !gameOver} transparent={true} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
              {renderActiveMiniGame()}
           </View>
         </View>
+      </Modal>
+
+      {/* MODAL GAME OVER */}
+      <Modal visible={gameOver} transparent={true} animationType="slide">
+         <View style={[styles.modalOverlay, {backgroundColor: 'rgba(153, 27, 27, 0.95)'}]}>
+            <Text style={{color: '#fca5a5', fontSize: 60, fontWeight: '900'}}>GAME OVER</Text>
+            <Text style={{color: 'white', fontSize: 24, marginTop: 10, width:'80%', textAlign:'center'}}>STRESS LEVEL BOSS MENCAPAI 100%. LU DIPECAT!</Text>
+            
+            <TouchableOpacity style={{backgroundColor: '#fff', padding: 20, borderRadius: 10, marginTop: 50}} onPress={resetGame}>
+               <Text style={{color: '#991b1b', fontSize: 20, fontWeight: 'bold'}}>CARI KERJAAN BARU (RESTART)</Text>
+            </TouchableOpacity>
+         </View>
       </Modal>
     </View>
   );
@@ -249,9 +325,9 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000', overflow: 'hidden' },
-  promptEBtn: { position: 'absolute', bottom: '15%', alignSelf: 'center', backgroundColor: '#3b82f6', paddingHorizontal: 30, paddingVertical: 15, borderRadius: 30, borderWidth: 4, borderColor: '#bfdbfe' },
+  promptEBtn: { position: 'absolute', bottom: '25%', alignSelf: 'center', backgroundColor: '#3b82f6', paddingHorizontal: 30, paddingVertical: 15, borderRadius: 30, borderWidth: 4, borderColor: '#bfdbfe' },
   promptEText: { color: 'white', fontWeight: '900', fontSize: 20 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', zIndex: 100 },
   modalContent: { width: '85%', maxWidth: 500, backgroundColor: '#1e293b', borderRadius: 16, padding: 30, alignItems: 'center', borderWidth: 3, borderColor: '#3b82f6' },
   modalTitle: { color: '#38bdf8', fontSize: 26, fontWeight: '900', marginBottom: 15, textAlign: 'center' },
 });
