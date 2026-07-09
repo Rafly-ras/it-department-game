@@ -6,61 +6,38 @@ export const TRIGGER_RADIUS = 50;
 
 export const TICKET_LIFESPAN = 45000; // 45 seconds ticket timer
 
-export const ROOMS = [
-  { id: 'server', name: 'Ruang IT/Server', x: 50, y: 50, w: 600, h: 550, color: '#334155' },
-  { id: 'hrd', name: 'Ruang HRD/Kubikel', x: 750, y: 50, w: 800, h: 550, color: '#475569' },
-  { id: 'direktur', name: 'Ruang CEO', x: 50, y: 700, w: 600, h: 500, color: '#1e293b' },
-  
-  // NEW ROOMS
-  { id: 'meeting', name: 'Ruang Meeting Utama', x: 750, y: 700, w: 800, h: 500, color: '#111827' },
-  { id: 'pantry', name: 'Lounge / Pantry', x: 1650, y: 50, w: 600, h: 1150, color: '#374151' },
-  { id: 'gudang', name: 'Gudang Rak IT', x: 50, y: 1300, w: 600, h: 800, color: '#1f2937' },
-];
 
 export const INITIAL_FURNITURES = [
-  // LAMA
-  { 
-    id: 'rack1', name: 'Rak Server Utama', 
-    x: 100, y: 100, w: 100, h: 200, 
-    color: '#3b82f6', status: 'normal', sprite: null 
-  },
-  { 
-    id: 'desk1', name: 'Meja Mbak Dina', 
-    x: 850, y: 200, w: 150, h: 80, 
-    color: '#3b82f6', status: 'normal', sprite: null 
-  },
-  { 
-    id: 'printer1', name: 'Printer HRD', 
-    x: 1100, y: 150, w: 80, h: 80, 
-    color: '#3b82f6', status: 'normal', sprite: null 
-  },
-  { 
-    id: 'router1', name: 'Router Direktur', 
-    x: 150, y: 800, w: 60, h: 60, 
-    color: '#3b82f6', status: 'normal', sprite: null 
-  },
-  {
-    id: 'basecamp', name: 'Meja Basecamp IT',
-    x: 750, y: 1300, w: 180, h: 100,
-    color: '#fff', status: 'shop', sprite: null 
-  },
+  // Server IT
+  { id: 'rack1', name: 'Server DB', x: 100, y: 100, w: 80, h: 200, color: '#3b82f6', status: 'normal', zHeight: 160, imageNormal: require('../../assets/sprites/server_clean.png'), imageError: require('../../assets/sprites/server_error.png') },
+  { id: 'rack2', name: 'Server Web', x: 200, y: 100, w: 80, h: 200, color: '#3b82f6', status: 'normal', zHeight: 160, imageNormal: require('../../assets/sprites/server_clean.png'), imageError: require('../../assets/sprites/server_error.png') },
+  { id: 'backupserver', name: 'NAS Storage', x: 100, y: 1350, w: 100, h: 200, color: '#f59e0b', status: 'normal', zHeight: 180, imageNormal: require('../../assets/sprites/nas_clean.png'), imageError: require('../../assets/sprites/nas_error.png') },
   
-  // BARU
-  { 
-    id: 'projector1', name: 'Proyektor BenQ', 
-    x: 1100, y: 850, w: 100, h: 100, 
-    color: '#14b8a6', status: 'normal', sprite: null 
-  },
-  { 
-    id: 'fridge1', name: 'Kulkas IoT', 
-    x: 1800, y: 200, w: 100, h: 100, 
-    color: '#a855f7', status: 'normal', sprite: null 
-  },
-  { 
-    id: 'backupserver', name: 'Storage Backup NAS', 
-    x: 100, y: 1500, w: 120, h: 150, 
-    color: '#84cc16', status: 'normal', sprite: null 
-  }
+  // HRD & Direktur
+  { id: 'desk1', name: 'PC Mbak Dina', x: 800, y: 100, w: 120, h: 80, color: '#10b981', status: 'normal', zHeight: 60, imageNormal: require('../../assets/sprites/pc_clean.png'), imageError: require('../../assets/sprites/pc_error.png') },
+  { id: 'desk2', name: 'PC Mas Budi', x: 1000, y: 100, w: 120, h: 80, color: '#10b981', status: 'normal', zHeight: 60, imageNormal: require('../../assets/sprites/pc_clean.png'), imageError: require('../../assets/sprites/pc_error.png') },
+  { id: 'router1', name: 'Router Direktur', x: 100, y: 900, w: 80, h: 80, color: '#f59e0b', status: 'normal', zHeight: 100, imageNormal: require('../../assets/sprites/router_clean.png'), imageError: require('../../assets/sprites/router_error.png') },
+  
+  // Main Room
+  { id: 'printer1', name: 'Printer Utama', x: 800, y: 300, w: 100, h: 80, color: '#6366f1', status: 'normal', zHeight: 80, imageNormal: require('../../assets/sprites/printer_clean.png'), imageError: require('../../assets/sprites/printer_error.png') },
+  { id: 'basecamp', name: 'Meja IT (Upgrade)', x: 400, y: 300, w: 150, h: 100, color: '#ec4899', status: 'shop', zHeight: 70, imageNormal: require('../../assets/sprites/basecamp_clean.png'), imageError: require('../../assets/sprites/basecamp_error.png') },
+  
+  // Ruang Meeting & Pantry
+  { id: 'projector1', name: 'Proyektor BenQ', x: 1100, y: 800, w: 150, h: 150, color: '#14b8a6', status: 'normal', zHeight: 50, imageNormal: require('../../assets/sprites/projector_clean.png'), imageError: require('../../assets/sprites/projector_error.png') },
+  { id: 'fridge1', name: 'Kulkas IoT', x: 1800, y: 200, w: 100, h: 150, color: '#a855f7', status: 'normal', zHeight: 180, imageNormal: require('../../assets/sprites/fridge_clean.png'), imageError: require('../../assets/sprites/fridge_error.png') },
+];
+
+export const WALLS = [
+  // Dinding Pembatas Ruang IT/Server
+  { id: 'wall_it_right', x: 650, y: 50, w: 20, h: 550, color: '#475569', zHeight: 180, imageNormal: require('../../assets/sprites/wall.png'), imageError: require('../../assets/sprites/wall.png') },
+  { id: 'wall_it_bottom', x: 50, y: 600, w: 600, h: 20, color: '#475569', zHeight: 180, imageNormal: require('../../assets/sprites/wall.png'), imageError: require('../../assets/sprites/wall.png') },
+  
+  // Dinding Pembatas Ruang Direktur
+  { id: 'wall_boss_top', x: 50, y: 680, w: 620, h: 20, color: '#475569', zHeight: 180, imageNormal: require('../../assets/sprites/wall.png'), imageError: require('../../assets/sprites/wall.png') },
+  { id: 'wall_boss_right', x: 650, y: 680, w: 20, h: 520, color: '#475569', zHeight: 180, imageNormal: require('../../assets/sprites/wall.png'), imageError: require('../../assets/sprites/wall.png') },
+  
+  // Dinding Pantry
+  { id: 'wall_pantry_left', x: 1630, y: 50, w: 20, h: 1150, color: '#475569', zHeight: 180, imageNormal: require('../../assets/sprites/wall.png'), imageError: require('../../assets/sprites/wall.png') },
 ];
 
 export const TICKET_TEMPLATES = [

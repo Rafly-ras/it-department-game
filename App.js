@@ -3,7 +3,7 @@ import { View, StyleSheet, Dimensions, Modal, TouchableOpacity, Text } from 'rea
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Constants & Data
-import { MAP_WIDTH, MAP_HEIGHT, PLAYER_SIZE, SPEED, TRIGGER_RADIUS, INITIAL_FURNITURES, TICKET_TEMPLATES, TICKET_LIFESPAN } from './src/constants/GameData';
+import { MAP_WIDTH, MAP_HEIGHT, PLAYER_SIZE, SPEED, TRIGGER_RADIUS, INITIAL_FURNITURES, WALLS, TICKET_TEMPLATES, TICKET_LIFESPAN } from './src/constants/GameData';
 
 // Components
 import GameMap from './src/components/GameMap';
@@ -195,6 +195,7 @@ export default function App() {
         if (newY < 0) newY = 0;
         if (newY > MAP_HEIGHT - PLAYER_SIZE) newY = MAP_HEIGHT - PLAYER_SIZE;
 
+        // Collision for furnitures
         for (let i = 0; i < furnitures.length; i++) {
           const obj = furnitures[i];
           if (checkCollision(newX, prev.y, obj.x, obj.y, obj.w, obj.h)) newX = prev.x;
@@ -210,6 +211,13 @@ export default function App() {
             triggerFound = obj.id;
           }
         }
+        
+        // Collision for WALLS
+        for (let i = 0; i < WALLS.length; i++) {
+          const wall = WALLS[i];
+          if (checkCollision(newX, prev.y, wall.x, wall.y, wall.w, wall.h)) newX = prev.x;
+          if (checkCollision(newX, newY, wall.x, wall.y, wall.w, wall.h)) newY = prev.y;
+        }
 
         if (newX === prev.x && newY === prev.y) {
            return prev; // Mencegah freeze React re-render looping object yang sama!
@@ -219,7 +227,15 @@ export default function App() {
 
       if (triggerFound !== activeTriggerRef.current) {
         activeTriggerRef.current = triggerFound;
-        setPromptE(!!triggerFound);
+        if (triggerFound) {
+           const found = furnitures.find(f => f.id === triggerFound);
+           let title = "Interaksi";
+           if(found.status === 'shop') title = "Buka Toko";
+           else if (found.status === 'broken') title = `Perbaiki ${found.name}`;
+           setPromptE({ id: triggerFound, title });
+        } else {
+           setPromptE(null);
+        }
       }
 
       if (newDir !== playerDir) setPlayerDir(newDir);
@@ -314,28 +330,18 @@ export default function App() {
      return <MainMenu onStart={() => setGameState('PLAYING')} />;
   }
 
-  const cameraOffsetX = windowSize.width / 2 - (player.x + PLAYER_SIZE / 2);
-  const cameraOffsetY = windowSize.height / 2 - (player.y + PLAYER_SIZE / 2);
-
   return (
     <View style={styles.container}>
       <GameMap 
-         cameraOffsetX={cameraOffsetX}
-         cameraOffsetY={cameraOffsetY}
          furnitures={furnitures}
          player={player}
          playerDir={playerDir}
          promptE={promptE}
+         windowSize={windowSize}
       />
 
-      <TicketOverlay money={money} highScore={highScore} tickets={tickets} stressLevel={stressLevel} />
+      <TicketOverlay money={money} highScore={highScore} tickets={tickets} stressLevel={stressLevel} playerPos={player} />
       <VirtualDPad onKeyPress={handleKeyIn} onKeyRelease={handleKeyOut} />
-
-      {promptE && !paused && !gameOver && (
-        <TouchableOpacity style={styles.promptEBtn} onPress={() => startInteraction(activeTriggerRef.current)}>
-          <Text style={styles.promptEText}>[E] ACTIONS_REQ</Text>
-        </TouchableOpacity>
-      )}
 
       <Modal visible={paused && activeMiniGame !== null && !gameOver} transparent={true} animationType="fade">
         <View style={styles.modalOverlay}>
