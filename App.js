@@ -3,7 +3,7 @@ import { View, StyleSheet, Dimensions, Modal, TouchableOpacity, Text } from 'rea
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Constants & Data
-import { MAP_WIDTH, MAP_HEIGHT, PLAYER_SIZE, SPEED, TRIGGER_RADIUS, INITIAL_FURNITURES, TICKET_TEMPLATES, TICKET_LIFESPAN } from './src/constants/GameData';
+import { MAP_WIDTH, MAP_HEIGHT, PLAYER_SIZE, SPEED, TRIGGER_RADIUS, INITIAL_FURNITURES, WALLS, TICKET_TEMPLATES, TICKET_LIFESPAN } from './src/constants/GameData';
 
 // Components
 import GameMap from './src/components/GameMap';
@@ -195,6 +195,7 @@ export default function App() {
         if (newY < 0) newY = 0;
         if (newY > MAP_HEIGHT - PLAYER_SIZE) newY = MAP_HEIGHT - PLAYER_SIZE;
 
+        // Collision for furnitures
         for (let i = 0; i < furnitures.length; i++) {
           const obj = furnitures[i];
           if (checkCollision(newX, prev.y, obj.x, obj.y, obj.w, obj.h)) newX = prev.x;
@@ -209,6 +210,13 @@ export default function App() {
           if ((obj.status === 'broken' || obj.status === 'shop') && checkCollision(newX, newY, triggerArea.x, triggerArea.y, triggerArea.w, triggerArea.h)) {
             triggerFound = obj.id;
           }
+        }
+        
+        // Collision for WALLS
+        for (let i = 0; i < WALLS.length; i++) {
+          const wall = WALLS[i];
+          if (checkCollision(newX, prev.y, wall.x, wall.y, wall.w, wall.h)) newX = prev.x;
+          if (checkCollision(newX, newY, wall.x, wall.y, wall.w, wall.h)) newY = prev.y;
         }
 
         if (newX === prev.x && newY === prev.y) {
